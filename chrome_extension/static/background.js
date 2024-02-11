@@ -2,6 +2,7 @@ chrome.runtime.onInstalled.addListener(function(details) {
     if(details.reason === "install") {
         chrome.storage.local.set({
             apiUrl: 'http://localhost:8000/v1',
+            apiKey: 'NONE',
             prompt_instructions:
                 `Hide all tweets, except for tweets about machine learning (ML), artificial intelligence (AI) and large language models (LLMs).`,
             hide_threshold: 0.6,

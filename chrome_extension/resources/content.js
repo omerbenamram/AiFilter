@@ -48,7 +48,7 @@ function calculateProbs(log_probs) {
 
 // Function to decide whether to hide a tweet
 async function shouldHideTweet(llm_config, tweet_text) {
-    if(tweet_cache.has(tweet_text)) {
+    if (tweet_cache.has(tweet_text)) {
         return tweet_cache.get(tweet_text);
     }
 
@@ -57,24 +57,22 @@ async function shouldHideTweet(llm_config, tweet_text) {
             const prompt = createMessageFromTemplate(
                 llm_config.prompt_template, llm_config.prompt_instructions, tweet_text);
 
-            const request = {
-                model: llm_config.model.id,
-                prompt: prompt,
-                max_tokens: 1,
-                logprobs: 10,
-                stream: false,
-            };
+            // Using the chat.completions.create method
+            const chatCompletion = await llm_config.openai_client.chat.completions.create({
+                messages: [{ role: "user", content: prompt }],
+                model: llm_config.model,
+            });
 
-            const response = await llm_config.openai_client.completions.create(request);
+            // Assuming the structure of the response and extracting the decision
+            // This part might need adjustment based on the actual response structure
+            const completionText = chatCompletion.choices[0].message.content.trim();
+            const result = completionText.toLowerCase().includes("no"); // Adjust this logic based on your completion handling
 
-            const log_probs = response.choices[0].logprobs;
-            const {yes_prob, no_prob} = calculateProbs(log_probs);
-            const result = no_prob > llm_config.hide_threshold;
-            if(result) {
-                console.log('Hiding tweet:', tweet_text, 'yes_prob:', yes_prob, 'no_prob:', no_prob);
+            if (result) {
+                console.log('Hiding tweet:', tweet_text);
             }
             return result;
-        } catch(error) {
+        } catch (error) {
             console.error('Error:', error);
             return false;
         }
@@ -107,13 +105,14 @@ processTweets().then(() => {
 async function initializeClient() {
     try {
         const api_url = await getOptionValue('apiUrl');
+        const api_key = await getOptionValue('apiKey');
         console.log('Using API URL:', api_url);
+        console.log(`Using API Key: ${api_key.slice(0, 4)}****${api_key.slice(-4)}`);
         const client = new OpenAI({
-            baseURL: api_url, apiKey: "NONE", dangerouslyAllowBrowser: true
+            baseURL: api_url, apiKey: api_key, dangerouslyAllowBrowser: true
         });
 
-        const models = await client.models.list();
-        const model = models.data[0];
+        const model = "gpt-3.5-turbo-0125";
         console.log('Using model:', model);
 
         const prompt_template = await getOptionValue('prompt_template');
